@@ -1,0 +1,16 @@
+{
+	"name": "expression.socket.io"
+	, "version": "0.1-alpha"
+	, "description": "socket.io with access to Connect/Express session"
+    ,"repository" : "https://github.com/ifraixedes/expression.socket.io.git"
+	, "keywords": "socket.io, express, connect, session"
+	, "homepage": "http://www.fraicu.com"
+	, "author": "Ivan Fraixedes <ivan@fraicu.com>"
+	, "main": "./index"
+	, "engines": {
+	    "node": "= 0.8.10"
+	}
+	, "preferGlobal": false
+	, "private": true
+	, "dependencies": {}
+}
