@@ -2,8 +2,8 @@ module.exports = exports;
 
 /**
  * Constructor
- *
- * @param {Object} io socket.io reference after the call to listen
+ * 
+ * @param {Object} io socket.io reference after call listen
  * @param {Object} sessionStore Connect session store instance
  * @param {Object} cookieParser Connect cookie parser instance
  * @param {Object} [options] to setup the socket. Between them: key (cookie name, by default
@@ -61,10 +61,9 @@ function ExpressionSocket(io, sessionStore, cookieParser, options) {
 
 ExpressionSocket.prototype.sockets;
 ExpressionSocket.prototype.of;
-ExpressionSocket.cookieId;
 
 /**
- *
+ * 
  * @param event
  * @param callback
  * @param namespace
@@ -76,9 +75,9 @@ ExpressionSocket.prototype.bindOn = function(event, callback, namespace) {
   namespace.on(event, function(socket) {
     self.cookieParser(socket.handshake, {}, function(parseErr) {
 
-      self.findCookie(socket.handshake);
+      socket.expressionCookieId = self.findCookie(socket.handshake);
 
-      if ((parseErr) || (!self.cookieId)) {
+      if ((parseErr) || (!socket.expressionCookieId)) {
         if (self.autoErrManager) {
           socket.disconnect();
           return;
@@ -87,7 +86,7 @@ ExpressionSocket.prototype.bindOn = function(event, callback, namespace) {
         }
       }
 
-      self.sessionStore.load(self.cookieId, function(storeErr, session) {
+      self.sessionStore.load(socket.expressionCookieId, function(storeErr, session) {
 
         if (self.autoErrManager) {
           if ((storeErr) || (!session)) {
@@ -104,7 +103,7 @@ ExpressionSocket.prototype.bindOn = function(event, callback, namespace) {
 };
 
 /**
- *
+ * 
  * @param callback
  * @param namespace
  * @api private
@@ -115,9 +114,9 @@ ExpressionSocket.prototype.bindAuthorization = function(callback, namespace) {
   namespace.authorization(function(handshake, fn) {
     self.cookieParser(handshake, {}, function(parseErr) {
 
-      self.findCookie(handshake);
+      var cookieId = self.findCookie(handshake);
 
-      if ((parseErr) || (!self.cookieId)) {
+      if ((parseErr) || (!cookieId)) {
         if (self.autoErrManager) {
           fn(parseErr, false);
           return;
@@ -126,7 +125,7 @@ ExpressionSocket.prototype.bindAuthorization = function(callback, namespace) {
         }
       }
 
-      self.sessionStore.load(self.cookieId, function(storeErr, session) {
+      self.sessionStore.load(cookieId, function(storeErr, session) {
 
         if (self.autoErrManager) {
           if ((storeErr) || (!session)) {
@@ -147,10 +146,9 @@ ExpressionSocket.prototype.bindEmit = function(event, message) {
 };
 
 /**
- *
+ * 
  * @param socket
  * @returns
- * @api private
  */
 ExpressionSocket.prototype.bindOnClientSocket = function(socket) {
   var self = this;
@@ -158,7 +156,7 @@ ExpressionSocket.prototype.bindOnClientSocket = function(socket) {
 
   socket[this.sessOn] = function(event, callback) {
     onMethod.call(socket, event, function(data, ackFn) {
-      self.sessionStore.load(self.cookieId, function(storeErr, session) {
+      self.sessionStore.load(socket.expressionCookieId, function(storeErr, session) {
 
         if (self.autoErrManager) {
           if ((storeErr) || (!session)) {
@@ -190,17 +188,15 @@ ExpressionSocket.prototype.bindOnClientSocket = function(socket) {
 };
 
 /**
- *
+ * 
  * @param handshake
  * @returns {String}
  * @api private
  */
 ExpressionSocket.prototype.findCookie = function(handshake) {
-  this.cookieId = (handshake.secureCookies && handshake.secureCookies[this.key])
+  return(handshake.secureCookies && handshake.secureCookies[this.key])
       || (handshake.signedCookies && handshake.signedCookies[this.key])
       || (handshake.cookies && handshake.cookies[this.key]) || false;
-
-  return this.cookieId;
 };
 
 module.exports = ExpressionSocket;
