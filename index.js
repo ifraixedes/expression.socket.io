@@ -1,202 +1,155 @@
+'use strict';
+
 module.exports = exports;
 
 /**
- * Constructor
- * 
+ *
  * @param {Object} io socket.io reference after call listen
  * @param {Object} sessionStore Connect session store instance
- * @param {Object} cookieParser Connect cookie parser instance
+ * @param {Function} cookieParser Connect cookie parser instance
  * @param {Object} [options] to setup the socket. Between them: key (cookie name, by default
- *          connect.sid), alwaysSession (boolean that provides an on method on the client that
- *          receive the session, if it is true, otherwise add a new method named sessOn, that it
- *          does the same but no override the original on method of the socket, but default false),
- *          autoErrManager (boolean that if it is true, this manages internally the session error
- *          and if the session is not loaded, too; otherwise provide an error parameter to the
- *          listen callbacks, by default false)
- * @returns
+ *          connect.sid), autoErrManager (boolean that if it is true, this manages internally the
+ *          session error and if the session is not loaded, too; otherwise provide an error parameter
+ *          to the listen callbacks, by default false)
+ * @returns {Object} socket.io object (it has been prototyped with new bechaviours in some original
+ *                       methods and  provided a new ones)
  */
-function ExpressionSocket(io, sessionStore, cookieParser, options) {
-  var self = this;
+function expressionSocket(io, sessionStore, cookieParser, options) {
 
-  this.sessionStore = sessionStore;
-  this.cookieParser = cookieParser;
+  var key = 'connect.sid';
+  var autoErrManager = false;
 
   if (options) {
-    this.key = (options.key) ? options.key : 'connect.sid';
-    this.sessOn = (options.alwaysSession) ? 'on' : 'sessOn';
-    this.autoErrManager = (options.autoErrManager) ? true : false;
-  } else {
-    this.key = 'connect.sid';
-    this.sessOn = 'sessOn';
-    this.autoErrManager = false;
+    if (options.key) {
+      key = options.key;
+    }
+
+    if (options.autoErrManager) {
+      autoErrManager = options.autoErrManager;
+    }
   }
 
-  this.sockets = {
-    on : function(event, callback) {
-      return self.bindOn(event, callback, io.sockets);
-    },
-    authorization : function(callback) {
-      return self.bindAuthorization(callback, io.sockets);
-    },
-    emit : function() {
-      io.sockets.emit.apply(io.sockets, arguments);
-    }
+  var findCookie = function(handshake) {
+    return (handshake.secureCookies && handshake.secureCookies[key])
+      || (handshake.signedCookies && handshake.signedCookies[key])
+      || (handshake.cookies && handshake.cookies[key]) || false;
   };
 
-  this.of = function(namespace) {
-    return {
-      on : function(event, callback) {
-        return self.bindOn(event, callback, io.of(namespace));
-      },
-      authorization : function(callback) {
-        return self.bindAuthorization(callback, io.of(namespace));
-      },
-      emit : function() {
-        io.of(namespace).emit.apply(io.of(namespace), arguments);
-      }
-    };
+  var authorization = function(callback) {
+
+    this.__proto__.authorization(function(handshake, fn) {
+      cookieParser(handshake, {}, function(parseErr) {
+
+        var cookieId = findCookie(handshake);
+
+        if ((parseErr) || (!cookieId)) {
+          if (autoErrManager) {
+            fn(parseErr, false);
+            return;
+          } else {
+            callback(parseErr, null, handshake, fn);
+          }
+        }
+
+        sessionStore.load(cookieId, function(storeErr, session) {
+
+          if (autoErrManager) {
+            if ((storeErr) || (!session)) {
+              fn(storeErr, false);
+            } else {
+              callback(session, handshake, fn);
+            }
+          } else {
+            callback(storeErr, session, handshake, fn);
+          }
+        });
+      });
+    });
+
   };
+
+ var serverSessOn = function(event, callback) {
+
+    this.on(event, function(socket) {
+      cookieParser(socket.handshake, {}, function(parseErr) {
+
+        socket.expressionCookieId = findCookie(socket.handshake);
+
+        if ((parseErr) || (!socket.expressionCookieId)) {
+          if (autoErrManager) {
+            socket.disconnect();
+            return;
+          } else {
+            socket.clientSessOn = clientSessOn;
+            callback(parseErr, null, socket);
+          }
+        }
+
+        sessionStore.load(socket.expressionCookieId, function(storeErr, session) {
+
+          if (autoErrManager) {
+            if ((storeErr) || (!session)) {
+              socket.disconnect();
+            } else {
+              socket.clientSessOn = clientSessOn;
+              callback(session, socket);
+            }
+          } else {
+            socket.clientSessOn = clientSessOn;
+            callback(storeErr, session, socket);
+          }
+        });
+      });
+    });
+ };
+
+   var clientSessOn = function(event, callback) {
+     var self = this;
+
+     this.on(event, function(data, ackFn) {
+       sessionStore.load(self.expressionCookieId, function(storeErr, session) {
+
+         if (autoErrManager) {
+           if ((storeErr) || (!session)) {
+             self.disconnect();
+           } else {
+             if (!data) {
+               callback(session);
+             } else if (!ackFn) {
+               callback(session, data);
+             } else {
+               callback(session, data, ackFn);
+             }
+           }
+         } else {
+           if (!data) {
+             callback(storeErr, session);
+           } else if (!ackFn) {
+             callback(storeErr, session, data);
+           } else {
+             callback(storeErr, session, data, ackFn);
+           }
+         }
+       });
+     });
+   };
+
+
+  io.sockets.sessOn = serverSessOn;
+  io.sockets.authorization = authorization;
+
+  io.of = function(namespace) {
+    var nsSockets = this.__proto__.of.call(this, namespace);
+
+    nsSockets.sessOn = serverSessOn;
+    nsSockets.authorization = authorization;
+
+    return nsSockets;
+  };
+
+  return io;
 
 }
 
-ExpressionSocket.prototype.sockets;
-ExpressionSocket.prototype.of;
 
-/**
- * 
- * @param event
- * @param callback
- * @param namespace
- * @api private
- */
-ExpressionSocket.prototype.bindOn = function(event, callback, namespace) {
-  var self = this;
-
-  namespace.on(event, function(socket) {
-    self.cookieParser(socket.handshake, {}, function(parseErr) {
-
-      socket.expressionCookieId = self.findCookie(socket.handshake);
-
-      if ((parseErr) || (!socket.expressionCookieId)) {
-        if (self.autoErrManager) {
-          socket.disconnect();
-          return;
-        } else {
-          callback(parseErr, null, self.bindOnClientSocket(socket));
-        }
-      }
-
-      self.sessionStore.load(socket.expressionCookieId, function(storeErr, session) {
-
-        if (self.autoErrManager) {
-          if ((storeErr) || (!session)) {
-            socket.disconnect();
-          } else {
-            callback(session, self.bindOnClientSocket(socket));
-          }
-        } else {
-          callback(storeErr, session, self.bindOnClientSocket(socket));
-        }
-      });
-    });
-  });
-};
-
-/**
- * 
- * @param callback
- * @param namespace
- * @api private
- */
-ExpressionSocket.prototype.bindAuthorization = function(callback, namespace) {
-  var self = this;
-
-  namespace.authorization(function(handshake, fn) {
-    self.cookieParser(handshake, {}, function(parseErr) {
-
-      var cookieId = self.findCookie(handshake);
-
-      if ((parseErr) || (!cookieId)) {
-        if (self.autoErrManager) {
-          fn(parseErr, false);
-          return;
-        } else {
-          callback(parseErr, null, handshake, fn);
-        }
-      }
-
-      self.sessionStore.load(cookieId, function(storeErr, session) {
-
-        if (self.autoErrManager) {
-          if ((storeErr) || (!session)) {
-            fn(storeErr, false);
-          } else {
-            callback(session, handshake, fn);
-          }
-        } else {
-          callback(storeErr, session, handshake, fn);
-        }
-      });
-    });
-  });
-};
-
-ExpressionSocket.prototype.bindEmit = function(event, message) {
-
-};
-
-/**
- * 
- * @param socket
- * @returns
- */
-ExpressionSocket.prototype.bindOnClientSocket = function(socket) {
-  var self = this;
-  var onMethod = socket.on;
-
-  socket[this.sessOn] = function(event, callback) {
-    onMethod.call(socket, event, function(data, ackFn) {
-      self.sessionStore.load(socket.expressionCookieId, function(storeErr, session) {
-
-        if (self.autoErrManager) {
-          if ((storeErr) || (!session)) {
-            socket.disconnect();
-          } else {
-            if (!data) {
-              callback(session);
-            } else if (!ackFn) {
-              callback(session, data);
-            } else {
-              callback(session, data, ackFn);
-            }
-          }
-        } else {
-          if (!data) {
-            callback(storeErr, session);
-          } else if (!ackFn) {
-            callback(storeErr, session, data);
-          } else {
-            callback(storeErr, session, data, ackFn);
-          }
-        }
-      });
-    });
-  };
-
-  return socket;
-
-};
-
-/**
- * 
- * @param handshake
- * @returns {String}
- * @api private
- */
-ExpressionSocket.prototype.findCookie = function(handshake) {
-  return(handshake.secureCookies && handshake.secureCookies[this.key])
-      || (handshake.signedCookies && handshake.signedCookies[this.key])
-      || (handshake.cookies && handshake.cookies[this.key]) || false;
-};
-
-module.exports = ExpressionSocket;
+module.exports = expressionSocket;
