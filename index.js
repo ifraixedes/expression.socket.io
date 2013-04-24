@@ -2,7 +2,7 @@ module.exports = exports;
 
 /**
  * Constructor
- * 
+ *
  * @param {Object} io socket.io reference after call listen
  * @param {Object} sessionStore Connect session store instance
  * @param {Object} cookieParser Connect cookie parser instance
@@ -59,11 +59,8 @@ function ExpressionSocket(io, sessionStore, cookieParser, options) {
 
 }
 
-ExpressionSocket.prototype.sockets;
-ExpressionSocket.prototype.of;
-
 /**
- * 
+ *
  * @param event
  * @param callback
  * @param namespace
@@ -103,7 +100,7 @@ ExpressionSocket.prototype.bindOn = function(event, callback, namespace) {
 };
 
 /**
- * 
+ *
  * @param callback
  * @param namespace
  * @api private
@@ -146,7 +143,7 @@ ExpressionSocket.prototype.bindEmit = function(event, message) {
 };
 
 /**
- * 
+ *
  * @param socket
  * @returns
  */
@@ -188,7 +185,7 @@ ExpressionSocket.prototype.bindOnClientSocket = function(socket) {
 };
 
 /**
- * 
+ *
  * @param handshake
  * @returns {String}
  * @api private
