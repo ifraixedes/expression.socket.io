@@ -7,10 +7,17 @@ module.exports = exports;
  * @param {Object} io socket.io reference after call listen
  * @param {Object} sessionStore Connect session store instance
  * @param {Function} cookieParser Connect cookie parser instance
- * @param {Object} [options] to setup the socket. Between them: key (cookie name, by default
- *          connect.sid), autoErrManager (boolean that if it is true, this manages internally the
- *          session error and if the session is not loaded, too; otherwise provide an error parameter
- *          to the listen callbacks, by default false)
+ * @param {Object} [options] to setup the socket. The optional object's properties are:
+ *          {
+ *            key: cookie name; by default 'connect.sid'
+ *            autoErrManager: boolean that if it is true, this manages internally the session error
+ *                  and if the session is not loaded, too; otherwise provide an error parameter to
+ *                  the listen callbacks; by default false
+ *            noSessIo: A boolean which if it is true, then the 'authentication' method that
+ *                  deals with with session and the sessOn  method won't be applied and provided to
+ *                  the io.sockets
+ *          }
+ *
  * @returns {Object} socket.io object (it has been prototyped with new bechaviours in some original
  *                       methods and  provided a new ones)
  */
@@ -18,27 +25,32 @@ function expressionSocket(io, sessionStore, cookieParser, options) {
 
   var key = 'connect.sid';
   var autoErrManager = false;
+  var noSessIo = false;
 
   if (options) {
-    if (options.key) {
+    if ('string' === typeof options.key) {
       key = options.key;
     }
 
-    if (options.autoErrManager) {
-      autoErrManager = options.autoErrManager;
+    if (options.autoErrManager === true) {
+      autoErrManager = true;
+    }
+
+    if (options.noSessIo === true) {
+      noSessIo = true;
     }
   }
 
-  var findCookie = function(handshake) {
+  var findCookie = function (handshake) {
     return (handshake.secureCookies && handshake.secureCookies[key])
       || (handshake.signedCookies && handshake.signedCookies[key])
       || (handshake.cookies && handshake.cookies[key]) || false;
   };
 
-  var authorization = function(callback) {
+  var authorization = function (callback) {
 
-    this.__proto__.authorization(function(handshake, fn) {
-      cookieParser(handshake, {}, function(parseErr) {
+    this.__proto__.authorization(function (handshake, fn) {
+      cookieParser(handshake, {}, function (parseErr) {
 
         var cookieId = findCookie(handshake);
 
@@ -51,7 +63,7 @@ function expressionSocket(io, sessionStore, cookieParser, options) {
           }
         }
 
-        sessionStore.load(cookieId, function(storeErr, session) {
+        sessionStore.load(cookieId, function (storeErr, session) {
 
           if (autoErrManager) {
             if ((storeErr) || (!session)) {
@@ -68,10 +80,10 @@ function expressionSocket(io, sessionStore, cookieParser, options) {
 
   };
 
- var serverSessOn = function(event, callback) {
+  var serverSessOn = function (event, callback) {
 
-    this.on(event, function(socket) {
-      cookieParser(socket.handshake, {}, function(parseErr) {
+    this.on(event, function (socket) {
+      cookieParser(socket.handshake, {}, function (parseErr) {
 
         socket.expressionCookieId = findCookie(socket.handshake);
 
@@ -85,7 +97,7 @@ function expressionSocket(io, sessionStore, cookieParser, options) {
           }
         }
 
-        sessionStore.load(socket.expressionCookieId, function(storeErr, session) {
+        sessionStore.load(socket.expressionCookieId, function (storeErr, session) {
 
           if (autoErrManager) {
             if ((storeErr) || (!session)) {
@@ -101,49 +113,55 @@ function expressionSocket(io, sessionStore, cookieParser, options) {
         });
       });
     });
- };
+  };
 
-   var clientSessOn = function(event, callback) {
-     var self = this;
+  var clientSessOn = function (event, callback) {
+    var self = this;
 
-     this.on(event, function(data, ackFn) {
-       sessionStore.load(self.expressionCookieId, function(storeErr, session) {
+    this.on(event, function (data, ackFn) {
+      sessionStore.load(self.expressionCookieId, function (storeErr, session) {
 
-         if (autoErrManager) {
-           if ((storeErr) || (!session)) {
-             self.disconnect();
-           } else {
-             if (!data) {
-               callback(session);
-             } else if (!ackFn) {
-               callback(session, data);
-             } else {
-               callback(session, data, ackFn);
-             }
-           }
-         } else {
-           if (!data) {
-             callback(storeErr, session);
-           } else if (!ackFn) {
-             callback(storeErr, session, data);
-           } else {
-             callback(storeErr, session, data, ackFn);
-           }
-         }
-       });
-     });
-   };
+        if (autoErrManager) {
+          if ((storeErr) || (!session)) {
+            self.disconnect();
+          } else {
+            if (!data) {
+              callback(session);
+            } else if (!ackFn) {
+              callback(session, data);
+            } else {
+              callback(session, data, ackFn);
+            }
+          }
+        } else {
+          if (!data) {
+            callback(storeErr, session);
+          } else if (!ackFn) {
+            callback(storeErr, session, data);
+          } else {
+            callback(storeErr, session, data, ackFn);
+          }
+        }
+      });
+    });
+  };
 
 
-  io.sockets.sessOn = serverSessOn;
-  io.sockets.authorization = authorization;
+  if (noSessIo === false) {
+    io.sockets.sessOn = serverSessOn;
+    io.sockets.authorization = authorization;
+  }
 
-  io.of = function(namespace) {
+  io.of = function (namespace, noSession) {
+
     var nsSockets = this.__proto__.of.call(this, namespace);
+
+    if (noSession === true) {
+      return nsSockets;
+    }
 
     nsSockets.sessOn = serverSessOn;
     nsSockets.authorization = authorization;
-
     return nsSockets;
   };
 
