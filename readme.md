@@ -208,20 +208,20 @@ io.sockets.on('connection', function(err, session, socket) {
 
 ```
 
-# Main difference between this release and 0.0.x
+## Main difference between this release and 0.0.x
 
 * The session socket is the same socket.io instance object returned by socket.io#listen, so all the functionalities plus the session features are available on it. The order release was a wrapper object, so some features, like use session in rooms weren't possible.
 
 * The module is just a function, rather than a Constructor.
 
-# Acknowledgements and Why I developed this module
+## Acknowledgements and Why I developed this module
 
 I would like to appreciate to the people who wrote in some blogs how to grant to socket.io the access to the Connect/Express session, between others, Daniel Baulig (http://www.danielbaulig.de/socket-ioexpress/) and Robert Martin (http://notjustburritos.tumblr.com/post/22682186189/socket-io-and-express-3); and also to Wagner Camarao (https://github.com/functioncallback/session.socket.io) and Peter Klaesson (https://github.com/alphapeter/socket.io-express) for providing some modules in the same scope with it.
 
 But it there are two modules which does it, why did I build it? Well, I have developed it, because I needed to access to the Express session but not only in the state that it is, when the client connects, but also when the client sends some messages, and as I couldn't get the fresh session with the modules that I found.
 
 
-# LICENSE
+## LICENSE
 
 License
 (The MIT License)
