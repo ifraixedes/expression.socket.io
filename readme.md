@@ -84,7 +84,7 @@ with those tweaks, unless 'true' value has been passed as second parameter, the 
 In all the rest, socket.io is the same as if expression.socket.io hadn't been applied.
 
 
-## Using this module deeper
+## Using this module in deep
 
 ### The function parameters
 
