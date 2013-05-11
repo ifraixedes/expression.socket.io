@@ -2,8 +2,7 @@
 
 This simple and micro node_module was born from my needs to get read/write to the fresh session, used in a express (3.0)/connect node web application, in the socket.io events.
 
-I tested with connect 2.7.3, express 3.1.0 and socket.io 0.9.13, but this it is alpha release becasuse I didn't execute any test framework and in the present time I am using in the development of the first beta of iWaz.at (http://www.iwaz.at) so this module has not been tested by me in any live system.
-
+I tested with connect 2.7.3, express 3.1.0 and socket.io 0.9.13, but this it is a beta release becasuse I didn't execute any test framework and in the present time, it is used in the private beta release of iWaz.at (http://www.iwaz.at).
 
 ## Installation
 

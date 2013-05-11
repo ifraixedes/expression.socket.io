@@ -1,6 +1,6 @@
 {
 	"name": "expression.socket.io"
-	, "version": "0.1.0-alpha"
+	, "version": "0.1.0-beta"
 	, "description": "socket.io with access to Connect/Express session"
     ,"repository" : "https://github.com/ifraixedes/expression.socket.io.git"
 	, "keywords": ["socket.io", "express", "connect", "session"]
