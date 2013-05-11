@@ -10,15 +10,16 @@ module.exports = exports;
  * @param {Object} [options] to setup the socket. The optional object's properties are:
  *          {
  *            key: cookie name; by default 'connect.sid'
- *            autoErrManager: boolean that if it is true, this manages internally the session error
- *                  and if the session is not loaded, too; otherwise provide an error parameter to
- *                  the listen callbacks; by default false
- *            noSessIo: A boolean which if it is true, then the 'authentication' method that
- *                  deals with with session and the sessOn  method won't be applied and provided to
- *                  the io.sockets
+ *            autoErrManager: boolean that if it is 'true', then any error to retrieve the session
+ *                   is managed internally; otherwise provide an error parameter to the listen
+ *                   callbacks; by default 'false'.
+ *            noSessIo: A boolean which if it is true, then the 'authentication' method that deals
+ *                  with with session and the sessOn  method won't be applied to the io.sockets, so
+  *                 it will an original socket.io but with the possibility to get namespaced sockets
+  *                 with the session features.
  *          }
  *
- * @returns {Object} socket.io object (it has been prototyped with new bechaviours in some original
+ * @returns {Object} socket.io object (it has been prototyped with new behaviours in some original
  *                       methods and  provided a new ones)
  */
 function expressionSocket(io, sessionStore, cookieParser, options) {
